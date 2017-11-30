@@ -1,5 +1,7 @@
 import re
 
+import Player
+
 class PLR(object):
     def __init__(self, mod=12):  
         self.function_unravel_re = re.compile(r"(\([PLR]+\)[0-9]+)|([PLR]+)")
@@ -45,14 +47,46 @@ class PLR(object):
             res_funct += function * (int(power[0]) if power else 1)
         return res_funct
 
+    def make_music(self, function, base_chord):
+        results = self.transform(function, base_chord, all_chords=True)
+        notes = []
+        for result in results:
+            notes += result.to_notes()
+        Player.make_wav_from_notes(notes, str(base_chord.chord_name()) + "-" + str(function))
+
     def __len__(self):
         return 0
 
 class Chord(object):
+    chord_map_order = ["c", "db", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"]
+    inverted_chord_map_order = ["fm", "f#m", "gm", "g#m", "am", "bbm", "bm", "cm", "c#m", "dm", "d#m", "em"]
+    notes = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"]
     def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
+        self.chord_map = {}
+        self.construct()
+
+    def construct(self):
+        mod = len(Chord.notes)
+        start_chord = (0, 4, 7)
+        inverted_start_chord = (0, 8, 5)
+        for i in range(mod):
+            self.chord_map[Chord.add_to(start_chord, i, mod)] = Chord.chord_map_order[i]
+            self.chord_map[Chord.add_to(inverted_start_chord, i, mod)] = Chord.inverted_chord_map_order[i]
+
+    def convert(tup):
+        return tuple(Chord.notes[x] for x in tup)
+
+    def minor(self):
+        pass
+
+    def chord_name(self):
+        return self.chord_map[(self.x, self.y, self.z)]
+
+    def to_notes(self):
+        return (Chord.notes[self.x], Chord.notes[self.y], Chord.notes[self.z])
 
     def order(self):
         pass
@@ -63,6 +97,9 @@ class Chord(object):
     def __eq__(self, other):
         return (self.x == other.x and self.y == other.y and self.z == other.z)
 
+    def add_to(tup, add, mod=12):
+        return tuple((((x + add) % mod) for x in tup))
+
 #this is the PLR function object, you define the mod here
 PLR_test = PLR(12)
 #this is a sample chord
@@ -72,5 +109,10 @@ print(PLR_test.function_unravel("PLR(PL)4PPPL(LR)2L"))
 print(PLR_test.L(chord_test))
 #you can transform a chord with a function string
 results = PLR_test.transform("PLR(PL)4PPP", chord_test, all_chords=True)
+notes = []
 for result in results:
-    print(result)
+    print(result.to_notes())
+    notes += result.to_notes()
+
+#Player.make_wav_from_notes(notes, "test_construction")
+PLR_test.make_music("(LR)9", Chord(0,8,5))
