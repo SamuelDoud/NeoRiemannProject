@@ -1,8 +1,8 @@
 import itertools
 
 import numpy
-import pysynth_d as ps
-from pysynth_d import *
+import pysynth as ps
+from pysynth import *
 import wave
 from pydub import AudioSegment
 

@@ -1,5 +1,6 @@
 import re
 import random
+from collections import Counter
 
 import Player
 
@@ -64,6 +65,21 @@ class PLR(object):
             return chord_map[-1]
         return chord_map
 
+    def pretty_path(self, chords):
+        maps = []
+        pretty_map = []
+        for i in range(len(chords) - 1):
+            maps.append(chords[i].find_function(chords[i + 1]))
+        flat_map = [function_str for mapping in maps for function_str in mapping]
+        word_count = dict(Counter(flat_map))
+        words_list = sorted(word_count, key=word_count.get, reverse=True)
+        for mappings in maps:
+            for word in words_list:
+                if word in mappings:
+                    pretty_map.append(word)
+                    break
+        return pretty_map
+
     def function_unravel(self, function_str):
         res_funct = ""
         functions = self.function_unravel_re.findall(function_str)
@@ -91,14 +107,24 @@ class Chord(object):
     chord_map_order = ["c", "db", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"]
     inverted_chord_map_order = ["fm", "f#m", "gm", "g#m", "am", "bbm", "bm", "cm", "c#m", "dm", "d#m", "em"]
     notes = ["c", "c#", "d", "eb", "e", "f", "f#", "g", "ab", "a", "bb", "b"]
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
+    def __init__(self, x=0, y=0, z=0, name=None):
+        if name:
+            name = name.lower()
+            if name in Chord.chord_map_order:
+                self.x = Chord.chord_map_order.index(name)
+                self.y = (self.x + 4) % 12
+                self.z = (self.x + 7) % 12
+            elif name in Chord.inverted_chord_map_order:
+                self.x = Chord.inverted_chord_map_order.index(name)
+                self.y = (self.x + 8) % 12
+                self.z = (self.x + 5) % 12
+        else:
+            self.x = x
+            self.y = y
+            self.z = z
         self.p, self.l, self.r = None, None, None
         self.chord_map = {}
         self.construct()
-
     def construct(self):
         mod = len(Chord.notes)
         start_chord = (0, 4, 7)
@@ -162,8 +188,7 @@ results = PLR_test.transform("P[LR](PL)4PPP", chord_test, all_chords=True)
 notes = []
 for result in results:
     print(result.to_notes())
-    notes += result.to_notes()
-'''
+
 C = Chord(0, 4, 7)
 Gm = Chord(2, 10, 7)
 Bb = Chord(10, 2, 5)
@@ -174,51 +199,79 @@ functs_to_Bb = C.find_function(Bb)
 
 for funct in functs_to_Gm:
     print(funct + ", " + str(len(funct)))
-'''
+
 print("-" * 80)
 for funct in functs_to_Bb:
     print(funct + ", " + str(len(funct)))
 
 #Player.make_wav_from_notes(notes, "test_construction")
-PLR_test.make_music("[LP](LR)9", Chord(0,8,5))'''
 
+#Beethoven's Ninth
+PLR_test.make_music("(LR)9", Chord(0,4,7))
+#Fifties Progression
+PLR_test.make_music("[LR][RLRL]LR", Chord(0,4,7))
+#Pachelbel
+PLR_test.make_music("L[LR][RLR][RL]", Chord(2,6,9))
+
+#Baby
+PLR_test.make_music("(LR[RL][LRLR]LR)5", Chord(0, 0, 0,name="D"))
+#Jolene
+PLR_test.make_music("(R[LR]R[RLR][RLR][LR]R)5", Chord(0, 0, 0, name="A"))
+'''
+
+#This is how paths are calculated
+#Chords are defined this way.
+C = Chord(0, 4, 7)
+Gm = Chord(2, 10, 7)
+Bb = Chord(10, 2, 5)
+Csm = Chord(8, 4, 1)
+#PLR objects are needed for these operations.
+paths = PLR_test.pretty_path([C, Gm, Bb, Csm] * 5)
+for path in paths:
+    print(path)
+
+'''
 
 
 #Producing subgroups
-C = Chord(0, 4, 7)
-'''
-#Order 2
-PLR_test.order(C, ["L"])
-PLR_test.order(C, ["(LR)6"])
-for n in range(12):
-    PLR_test.order(C, ["(LR)" + str(n) + "L"])
+for n in [0, 1]:
+    for x in range(1,12):
+        if n == 0:
+            C = Chord(x % 12, (x + 4) % 12, (x + 7) % 12)
+        if n == 1:
+            C = Chord(x % 12, (x + 8) % 12, (x + 5) % 12)
+        #Order 2
+        PLR_test.order(C, ["L"])
+        PLR_test.order(C, ["(LR)6"])
+        for n in range(12):
+            PLR_test.order(C, ["(LR)" + str(n) + "L"])
 
-#Order 4
-PLR_test.order(C, ["(LR)3"])
-for n in range(6):
-    PLR_test.order(C, ["(LR)6", "(LR)" + str(n) + "L"])
+        #Order 4
+        PLR_test.order(C, ["(LR)3"])
+        for n in range(6):
+            PLR_test.order(C, ["(LR)6", "(LR)" + str(n) + "L"])
 
-#Order 6
+        #Order 6
 
-PLR_test.order(C, ["(LR)2"])
-for n in range(4):
-    PLR_test.order(C, ["(LR)4", "(LR)" + str(n) + "L"])
-
-
-#Order 8
-for n in range(3):
-    PLR_test.order(C, ["(LR)3", "(LR)" + str(n) + "L"])
-
-#Order 12
-
-PLR_test.order(C, ["LR"])
-PLR_test.order(C, ["(LR)2", "L"])
-PLR_test.order(C, ["(LR)2", "(LR)L"])
+        PLR_test.order(C, ["(LR)2"])
+        for n in range(4):
+            PLR_test.order(C, ["(LR)4", "(LR)" + str(n) + "L"])
 
 
-#Order 3
-PLR_test.order(C, ["(LR)4"])
+        #Order 8
+        for n in range(3):
+            PLR_test.order(C, ["(LR)3", "(LR)" + str(n) + "L"])
 
-#Order 24
-PLR_test.order(C, ["LR", "L"])
-'''
+        #Order 12
+
+        PLR_test.order(C, ["LR"])
+        PLR_test.order(C, ["(LR)2", "L"])
+        PLR_test.order(C, ["(LR)2", "(LR)L"])
+
+
+        #Order 3
+        PLR_test.order(C, ["(LR)4"])
+
+        #Order 24
+        PLR_test.order(C, ["LR", "L"])
+        '''
